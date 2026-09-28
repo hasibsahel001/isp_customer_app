@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'models/province.dart';
 import 'providers/auth_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_navigation_screen.dart';
+import 'screens/province_select_screen.dart';
+import 'services/secure_storage_service.dart';
 import 'theme/app_theme.dart';
 
 void main() {
@@ -38,13 +41,43 @@ class AuthGate extends ConsumerWidget {
 
     switch (authState.status) {
       case AuthStatus.unknown:
-        return const Scaffold(
-          body: Center(child: CircularProgressIndicator()),
-        );
+        return const Scaffold(body: Center(child: CircularProgressIndicator()));
       case AuthStatus.authenticated:
         return const MainNavigationScreen();
       case AuthStatus.unauthenticated:
-        return const LoginScreen();
+        return const _LoggedOutRouter();
     }
+  }
+}
+
+// تصمیم بین صفحهٔ انتخاب ولایت و صفحهٔ لاگین
+class _LoggedOutRouter extends ConsumerWidget {
+  const _LoggedOutRouter();
+
+  Future<Province?> _savedProvince(WidgetRef ref) async {
+    final name = await SecureStorageService.getProvince();
+    if (name == null) return null;
+    try {
+      final list = await ref.read(apiServiceProvider).getProvinces();
+      for (final p in list) {
+        if (p.name == name) return p;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return FutureBuilder<Province?>(
+      future: _savedProvince(ref),
+      builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
+        final p = snap.data;
+        if (p == null) return const ProvinceSelectScreen();
+        return LoginScreen(province: p);
+      },
+    );
   }
 }

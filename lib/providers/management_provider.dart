@@ -32,15 +32,22 @@ Future<RouterService> connectToCustomerRouter() async {
     throw Exception('آدرس روتر یافت نشد');
   }
   final service = RouterService();
-  await service.connect(gatewayIp, app_config.RouterConfig.apiPort, creds['username']!, creds['password']!);
+  await service.connect(
+      gatewayIp, app_config.RouterConfig.apiPort, creds['username']!, creds['password']!);
   return service;
 }
 
+class _Flow {
+  final String src;
+  final String dst;
+  final double bits;
+  final DateTime time;
+  _Flow(this.src, this.dst, this.bits, this.time);
+}
+
 class ManagementController extends AsyncNotifier<ManagementSnapshot> {
-  // سوکت ۱: فقط استریم‌های زنده
-  RouterService? _live;
-  // سوکت ۲: دستورات معمولی (لیست دستگاه‌ها، اکشن‌ها)
-  RouterService? _cmd;
+  RouterService? _live; // سوکت استریم‌ها
+  RouterService? _cmd; // سوکت دستورات
 
   StreamSubscription? _totalSub;
   StreamSubscription? _torchSub;
@@ -48,20 +55,14 @@ class ManagementController extends AsyncNotifier<ManagementSnapshot> {
   Timer? _uiTimer;
 
   String _iface = 'ether1';
-
   double _totalDown = 0;
   double _totalUp = 0;
 
   List<OnlineDevice> _devices = [];
-  Map<String, DeviceLimitStatus> _limits = {};
+  Map<String, int> _limits = {};
 
-  // مجموع نرخ هر IP در پنجرهٔ فعلی torch
-  final Map<String, double> _downAcc = {};
-  final Map<String, double> _upAcc = {};
-  // آخرین مقدار نمایش‌داده‌شده (تا بین دو بروزرسانی صفر نشود)
-  Map<String, double> _downShown = {};
-  Map<String, double> _upShown = {};
-  DateTime _lastTorchFlush = DateTime.now();
+  // آخرین مقدار هر جریان (src>dst)؛ جریان‌های قدیمی‌تر از ۳ ثانیه حذف می‌شوند
+  final Map<String, _Flow> _flows = {};
 
   @override
   Future<ManagementSnapshot> build() async {
@@ -69,17 +70,12 @@ class ManagementController extends AsyncNotifier<ManagementSnapshot> {
 
     _cmd = await connectToCustomerRouter();
     _live = await connectToCustomerRouter();
-
     _iface = await _cmd!.detectDhcpInterface();
 
     await _refreshList();
-
     _startStreams();
 
-    // لیست دستگاه‌ها هر ۱۰ ثانیه؛ خطا لیست قبلی را پاک نمی‌کند
     _listTimer = Timer.periodic(const Duration(seconds: 10), (_) => _refreshList());
-
-    // رندر UI هر ۵۰۰ms از آخرین داده‌های زنده
     _uiTimer = Timer.periodic(const Duration(milliseconds: 500), (_) => _emit());
 
     return _buildSnapshot();
@@ -101,38 +97,20 @@ class ManagementController extends AsyncNotifier<ManagementSnapshot> {
     }, onError: (_) {});
 
     _torchSub = _live!.torchStream(_iface).listen((e) {
-      // torch هر ثانیه برای هر جریان یک رکورد می‌فرستد
-      final now = DateTime.now();
-      if (now.difference(_lastTorchFlush).inMilliseconds > 1500) {
-        // شروع پنجرهٔ جدید: مقدار قبلی را به‌عنوان نمایش نهایی بردار
-        _downShown = Map.of(_downAcc);
-        _upShown = Map.of(_upAcc);
-        _downAcc.clear();
-        _upAcc.clear();
-        _lastTorchFlush = now;
-      }
-
       final src = e['src-address'];
       final dst = e['dst-address'];
-      final tx = double.tryParse(e['tx'] ?? e['tx-rate'] ?? '0') ?? 0;
-      final rx = double.tryParse(e['rx'] ?? e['rx-rate'] ?? '0') ?? 0;
-
-      if (src != null && src.isNotEmpty) {
-        _upAcc[src] = (_upAcc[src] ?? 0) + tx;
-      }
-      if (dst != null && dst.isNotEmpty) {
-        _downAcc[dst] = (_downAcc[dst] ?? 0) + rx;
-      }
-      // نمایش زنده: بیشینهٔ مقدار جاری و پنجرهٔ قبل
-      _downShown = {..._downShown, ..._downAcc};
-      _upShown = {..._upShown, ..._upAcc};
+      if (src == null || dst == null || src.isEmpty || dst.isEmpty) return;
+      final tx = double.tryParse(e['tx'] ?? '0') ?? 0;
+      final rx = double.tryParse(e['rx'] ?? '0') ?? 0;
+      // جهت tx/rx نسبت به روتر است؛ جمع هر دو، مستقل از جهت درست است
+      _flows['$src>$dst'] = _Flow(src, dst, tx + rx, DateTime.now());
     }, onError: (_) {});
   }
 
   Future<void> _refreshList() async {
     try {
       final devices = await _cmd!.getOnlineDevices();
-      final limits = await _cmd!.getLimitStatuses();
+      final limits = await _cmd!.getLimitKbps();
       _devices = devices;
       _limits = limits;
     } catch (_) {
@@ -141,13 +119,27 @@ class ManagementController extends AsyncNotifier<ManagementSnapshot> {
   }
 
   ManagementSnapshot _buildSnapshot() {
+    final now = DateTime.now();
+    _flows.removeWhere((_, f) => now.difference(f.time).inMilliseconds > 3000);
+
+    final down = <String, double>{};
+    final up = <String, double>{};
+    for (final f in _flows.values) {
+      down[f.dst] = (down[f.dst] ?? 0) + f.bits;
+      up[f.src] = (up[f.src] ?? 0) + f.bits;
+    }
+
     final list = _devices.map((d) {
+      final kbps = _limits[d.ipAddress] ?? 0;
+      final status = kbps == 0
+          ? DeviceLimitStatus.normal
+          : (kbps <= 1 ? DeviceLimitStatus.blocked : DeviceLimitStatus.limited);
       return ManagedDevice(
         device: d,
-        limitStatus: _limits[d.ipAddress] ?? DeviceLimitStatus.normal,
-        limitDownloadKbps: 0,
-        currentDownloadKbps: (_downShown[d.ipAddress] ?? 0) / 1000,
-        currentUploadKbps: (_upShown[d.ipAddress] ?? 0) / 1000,
+        limitStatus: status,
+        limitDownloadKbps: kbps,
+        currentDownloadKbps: (down[d.ipAddress] ?? 0) / 1000,
+        currentUploadKbps: (up[d.ipAddress] ?? 0) / 1000,
       );
     }).toList();
 

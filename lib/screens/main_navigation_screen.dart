@@ -13,39 +13,34 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
 
-  final _screens = const [
-    HomeScreen(),
-    ManagementScreen(),
-    SettingsScreen(),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    // فقط تب فعال ساخته می‌شود تا استریم‌های مدیریت وقتی در تب دیگر هستیم بی‌دلیل باز نمانند
+    final Widget body = switch (_currentIndex) {
+      0 => const HomeScreen(),
+      1 => const ManagementScreen(),
+      _ => const SettingsScreen(),
+    };
+
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
-        selectedItemColor: const Color(0xFF2563EB),
-        unselectedItemColor: Colors.grey,
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(
+      body: body,
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _currentIndex,
+        onDestinationSelected: (i) => setState(() => _currentIndex = i),
+        destinations: const [
+          NavigationDestination(
             icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
+            selectedIcon: Icon(Icons.home_rounded),
             label: 'خانه',
           ),
-          BottomNavigationBarItem(
+          NavigationDestination(
             icon: Icon(Icons.tune_outlined),
-            activeIcon: Icon(Icons.tune),
+            selectedIcon: Icon(Icons.tune_rounded),
             label: 'مدیریت',
           ),
-          BottomNavigationBarItem(
+          NavigationDestination(
             icon: Icon(Icons.settings_outlined),
-            activeIcon: Icon(Icons.settings),
+            selectedIcon: Icon(Icons.settings_rounded),
             label: 'تنظیمات',
           ),
         ],

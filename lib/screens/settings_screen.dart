@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
-import 'login_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -53,10 +52,7 @@ class SettingsScreen extends ConsumerWidget {
                 onPressed: () async {
                   await ref.read(authProvider.notifier).logout();
                   if (context.mounted) {
-                    Navigator.of(context).pushAndRemoveUntil(
-                      MaterialPageRoute(builder: (_) => const LoginScreen()),
-                          (route) => false,
-                    );
+                    Navigator.of(context).popUntil((route) => route.isFirst);
                   }
                 },
                 icon: const Icon(Icons.logout_rounded, color: AppColors.danger),

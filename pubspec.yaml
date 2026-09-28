@@ -40,6 +40,7 @@ dependencies:
   network_info_plus: ^8.2.1
   permission_handler: ^13.0.2
   crypto: ^3.0.7
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:

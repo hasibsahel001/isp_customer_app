@@ -46,13 +46,27 @@ class ManagementScreen extends ConsumerWidget {
 
   Widget _buildContent(BuildContext context, ManagementSnapshot snapshot) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
       children: [
         _buildTotalSpeedCard(snapshot),
-        const SizedBox(height: 20),
-        Text(
-          'دستگاه‌های متصل (${snapshot.devices.length})',
-          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+        const SizedBox(height: 22),
+        Row(
+          children: [
+            const Text('دستگاه‌های متصل',
+                style: TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text('${snapshot.devices.length}',
+                  style: const TextStyle(
+                      color: AppColors.primary, fontWeight: FontWeight.w800, fontSize: 12)),
+            ),
+          ],
         ),
         const SizedBox(height: 12),
         if (snapshot.devices.isEmpty)
@@ -68,51 +82,90 @@ class ManagementScreen extends ConsumerWidget {
 
   Widget _buildTotalSpeedCard(ManagementSnapshot snapshot) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.primary, AppColors.primaryDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
+        gradient: AppColors.headerGradient,
+        borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.3),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
-          ),
+              color: AppColors.primary.withOpacity(0.35),
+              blurRadius: 26,
+              offset: const Offset(0, 12)),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          const Row(
-            children: [
-              Icon(Icons.router_rounded, color: Colors.white70, size: 18),
-              SizedBox(width: 8),
-              Text('سرعت لحظه‌ای کل شبکه', style: TextStyle(color: Colors.white70, fontSize: 13)),
-            ],
+          Positioned(
+            left: -30,
+            top: -30,
+            child: Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                  shape: BoxShape.circle, color: Colors.white.withOpacity(0.07)),
+            ),
           ),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              Expanded(
-                child: _speedStat(
-                  icon: Icons.arrow_downward_rounded,
-                  label: 'دانلود',
-                  value: formatSpeed(snapshot.totalDownKbps),
+          Positioned(
+            right: -20,
+            bottom: -40,
+            child: Container(
+              width: 110,
+              height: 110,
+              decoration: BoxDecoration(
+                  shape: BoxShape.circle, color: Colors.white.withOpacity(0.06)),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(7),
+                      decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.18),
+                          borderRadius: BorderRadius.circular(10)),
+                      child: const Icon(Icons.speed_rounded, color: Colors.white, size: 18),
+                    ),
+                    const SizedBox(width: 10),
+                    const Text('سرعت لحظه‌ای کل شبکه',
+                        style: TextStyle(color: Colors.white, fontSize: 13)),
+                    const Spacer(),
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                          color: Color(0xFF34D399), shape: BoxShape.circle),
+                    ),
+                    const SizedBox(width: 5),
+                    const Text('زنده',
+                        style: TextStyle(color: Colors.white70, fontSize: 11)),
+                  ],
                 ),
-              ),
-              Container(width: 1, height: 40, color: Colors.white24),
-              Expanded(
-                child: _speedStat(
-                  icon: Icons.arrow_upward_rounded,
-                  label: 'آپلود',
-                  value: formatSpeed(snapshot.totalUpKbps),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _speedStat(
+                        icon: Icons.arrow_downward_rounded,
+                        label: 'دانلود',
+                        value: formatSpeed(snapshot.totalDownKbps),
+                      ),
+                    ),
+                    Container(width: 1, height: 44, color: Colors.white24),
+                    Expanded(
+                      child: _speedStat(
+                        icon: Icons.arrow_upward_rounded,
+                        label: 'آپلود',
+                        value: formatSpeed(snapshot.totalUpKbps),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -131,95 +184,156 @@ class ManagementScreen extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 6),
-        Text(value, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700)),
+        Text(value,
+            textDirection: TextDirection.ltr,
+            style: const TextStyle(
+                color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800)),
       ],
     );
   }
 
-  Widget _deviceRow(BuildContext context, ManagedDevice managedDevice) {
-    final statusColor = switch (managedDevice.limitStatus) {
-      DeviceLimitStatus.normal => AppColors.success,
-      DeviceLimitStatus.limited => AppColors.warning,
-      DeviceLimitStatus.blocked => AppColors.danger,
-    };
+  Widget _deviceRow(BuildContext context, ManagedDevice d) {
+    final isBlocked = d.limitStatus == DeviceLimitStatus.blocked;
+    final isLimited = d.limitStatus == DeviceLimitStatus.limited;
+    final hasRestriction = isBlocked || isLimited;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(color: AppColors.primary.withOpacity(0.05), blurRadius: 12, offset: const Offset(0, 3)),
-        ],
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => DeviceDetailScreen(
-                deviceIp: managedDevice.device.ipAddress,
-                initialDevice: managedDevice,
+    final accent = hasRestriction ? AppColors.danger : AppColors.primary;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Container(
+        decoration:
+        AppDecor.card(borderColor: hasRestriction ? AppColors.danger : null),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => DeviceDetailScreen(
+                  deviceIp: d.device.ipAddress,
+                  initialDevice: d,
+                ),
               ),
-            ),
-          );
-        },
-        child: Row(
-          children: [
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    managedDevice.device.hostName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    managedDevice.device.ipAddress,
-                    style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                    textDirection: TextDirection.ltr,
-                  ),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
               children: [
                 Row(
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.arrow_downward_rounded, size: 12, color: AppColors.primary),
-                    const SizedBox(width: 2),
-                    Text(formatSpeed(managedDevice.currentDownloadKbps),
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                    Container(
+                      width: 46,
+                      height: 46,
+                      decoration: BoxDecoration(
+                        color: accent.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(
+                        isBlocked ? Icons.block_rounded : Icons.smartphone_rounded,
+                        color: accent,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            d.device.hostName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 15,
+                                color: AppColors.textPrimary),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            d.device.ipAddress,
+                            textDirection: TextDirection.ltr,
+                            style: const TextStyle(
+                                fontSize: 12, color: AppColors.textSecondary),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.chevron_left_rounded,
+                        color: AppColors.textSecondary),
                   ],
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 12),
                 Row(
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.arrow_upward_rounded, size: 12, color: AppColors.secondary),
-                    const SizedBox(width: 2),
-                    Text(formatSpeed(managedDevice.currentUploadKbps),
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                    Expanded(
+                      child: _rateChip(
+                        Icons.arrow_downward_rounded,
+                        formatSpeed(d.currentDownloadKbps),
+                        AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _rateChip(
+                        Icons.arrow_upward_rounded,
+                        formatSpeed(d.currentUploadKbps),
+                        AppColors.secondary,
+                      ),
+                    ),
                   ],
                 ),
+                if (hasRestriction) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.danger.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(isBlocked ? Icons.block_rounded : Icons.speed_rounded,
+                            size: 16, color: AppColors.danger),
+                        const SizedBox(width: 8),
+                        Text(
+                          isBlocked
+                              ? 'این دستگاه بلاک شده است'
+                              : 'محدودیت سرعت: ${formatLimit(d.limitDownloadKbps)}',
+                          style: const TextStyle(
+                              color: AppColors.danger,
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w700),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
-            const SizedBox(width: 6),
-            const Icon(Icons.chevron_left_rounded, color: AppColors.textSecondary, size: 20),
-          ],
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _rateChip(IconData icon, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 10),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.09),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 15, color: color),
+          const SizedBox(width: 6),
+          Text(value,
+              textDirection: TextDirection.ltr,
+              style: TextStyle(
+                  fontSize: 12.5, fontWeight: FontWeight.w800, color: color)),
+        ],
       ),
     );
   }

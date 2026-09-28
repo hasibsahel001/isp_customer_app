@@ -85,22 +85,16 @@ class RouterService {
     }).toList();
   }
 
-  Future<Map<String, DeviceLimitStatus>> getLimitStatuses() async {
+  // آی‌پی ← سقف دانلود بر حسب Kbps (0 یعنی بدون محدودیت)
+  Future<Map<String, int>> getLimitKbps() async {
     final queues = await _client.talk(['/queue/simple/print']);
-    final result = <String, DeviceLimitStatus>{};
+    final result = <String, int>{};
     for (final q in queues) {
       final target = (q['target'] ?? '').split('/').first;
       if (target.isEmpty) continue;
       final parts = (q['max-limit'] ?? '').split('/');
       final dl = parts.length > 1 ? parts[1] : (parts.isNotEmpty ? parts[0] : '0');
-      final kbps = _parseRate(dl);
-      if (kbps == 0) {
-        result[target] = DeviceLimitStatus.normal;
-      } else if (kbps <= 1) {
-        result[target] = DeviceLimitStatus.blocked;
-      } else {
-        result[target] = DeviceLimitStatus.limited;
-      }
+      result[target] = _parseRate(dl);
     }
     return result;
   }

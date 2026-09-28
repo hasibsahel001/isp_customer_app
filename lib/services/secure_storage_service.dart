@@ -5,6 +5,7 @@ class SecureStorageService {
   static const _tokenKey = 'jwt_token';
   static const _routerUserKey = 'router_username';
   static const _routerPassKey = 'router_password';
+  static const _provinceKey = 'selected_province';
 
   static Future<void> saveToken(String token) async {
     await _storage.write(key: _tokenKey, value: token);
@@ -26,7 +27,22 @@ class SecureStorageService {
     return {'username': u, 'password': p};
   }
 
+  static Future<void> saveProvince(String name) async {
+    await _storage.write(key: _provinceKey, value: name);
+  }
+
+  static Future<String?> getProvince() async {
+    return await _storage.read(key: _provinceKey);
+  }
+
+  static Future<void> deleteProvince() async {
+    await _storage.delete(key: _provinceKey);
+  }
+
+  // خروج از حساب: ولایت انتخاب‌شده حفظ می‌شود
   static Future<void> deleteAll() async {
-    await _storage.deleteAll();
+    await _storage.delete(key: _tokenKey);
+    await _storage.delete(key: _routerUserKey);
+    await _storage.delete(key: _routerPassKey);
   }
 }
