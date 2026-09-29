@@ -12,15 +12,15 @@ class SupportContact {
 
 const Map<String, SupportContact> kSupportByProvince = {
   'ghazni': SupportContact(
-    telegramUrl: 'https://t.me/hasibsahel',
-    whatsappNumber: '93729011991',
-    displayPhone: '0729011991',
+    telegramUrl: 'https://t.me/khorshid',
+    whatsappNumber: '93783555777',
+    displayPhone: '0783555777',
   ),
   // TODO: mazar و shiberghan را وقتی فعال شدند اینجا اضافه کنید
 };
 
 const SupportContact kDefaultSupport = SupportContact(
-  telegramUrl: 'https://t.me/hasibsahel',
-  whatsappNumber: '93729011991',
-  displayPhone: '0729011991',
+  telegramUrl: 'https://t.me/khorshid',
+  whatsappNumber: '93783555777',
+  displayPhone: '0783555777',
 );
