@@ -177,8 +177,7 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
             color: color,
           ),
           const SizedBox(width: 10),
-          Text(text,
-              style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 14)),
+          Text(text, style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 14)),
         ],
       ),
     );
@@ -191,8 +190,7 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('نام دستگاه',
-              style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          const Text('نام دستگاه', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -227,12 +225,12 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
       children: [
         Expanded(
           child: _speedBox(Icons.arrow_downward_rounded, 'دانلود فعلی',
-              formatSpeed(d.currentDownloadKbps), AppColors.primary),
+              formatSpeed(d.currentUploadKbps), AppColors.primary),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: _speedBox(Icons.arrow_upward_rounded, 'آپلود فعلی',
-              formatSpeed(d.currentUploadKbps), AppColors.secondary),
+              formatSpeed(d.currentDownloadKbps), AppColors.secondary),
         ),
       ],
     );
@@ -247,13 +245,12 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
         children: [
           Container(
             padding: const EdgeInsets.all(7),
-            decoration: BoxDecoration(
-                color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(10)),
+            decoration:
+            BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(10)),
             child: Icon(icon, color: color, size: 18),
           ),
           const SizedBox(height: 10),
-          Text(label,
-              style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary)),
+          Text(label, style: const TextStyle(fontSize: 11.5, color: AppColors.textSecondary)),
           const SizedBox(height: 2),
           Text(value,
               textDirection: TextDirection.ltr,
@@ -274,47 +271,20 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
             children: [
               Icon(Icons.speed_rounded, color: AppColors.primary, size: 20),
               SizedBox(width: 8),
-              Text('محدودیت سرعت',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+              Text('محدودیت سرعت', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
             ],
           ),
-          const SizedBox(height: 14),
-          GridView.count(
-            crossAxisCount: 3,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 8,
-            crossAxisSpacing: 8,
-            childAspectRatio: 2.3,
-            children: kSpeedLimitOptions.map((opt) {
-              final selected = _selectedKbps == opt.kbps;
-              return InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () => setState(() => _selectedKbps = opt.kbps),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    gradient: selected ? AppColors.headerGradient : null,
-                    color: selected ? null : AppColors.background,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                        color: selected ? Colors.transparent : AppColors.border),
-                  ),
-                  child: Text(
-                    formatLimit(opt.kbps),
-                    textDirection: TextDirection.ltr,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w800,
-                      color: selected ? Colors.white : AppColors.textPrimary,
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
           const SizedBox(height: 16),
+          const Text('کیلوبیت بر ثانیه',
+              style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          _chipLine(kKbpsOptions),
+          const SizedBox(height: 16),
+          const Text('مگابیت بر ثانیه',
+              style: TextStyle(fontSize: 11.5, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          _chipLine(kMbpsOptions),
+          const SizedBox(height: 18),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
@@ -332,6 +302,45 @@ class _DeviceDetailScreenState extends ConsumerState<DeviceDetailScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _chipLine(List<SpeedLimitOption> options) {
+    return SizedBox(
+      height: 42,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: options.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, i) {
+          final opt = options[i];
+          final selected = _selectedKbps == opt.kbps;
+          return InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => setState(() => _selectedKbps = opt.kbps),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                gradient: selected ? AppColors.headerGradient : null,
+                color: selected ? null : AppColors.background,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: selected ? Colors.transparent : AppColors.border),
+              ),
+              child: Text(
+                opt.label,
+                textDirection: TextDirection.ltr,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: selected ? Colors.white : AppColors.textPrimary,
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

@@ -49,7 +49,7 @@ class ManagementScreen extends ConsumerWidget {
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
       children: [
         _buildTotalSpeedCard(snapshot),
-        const SizedBox(height: 22),
+        const SizedBox(height: 20),
         Row(
           children: [
             const Text('دستگاه‌های متصل',
@@ -68,7 +68,7 @@ class ManagementScreen extends ConsumerWidget {
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         if (snapshot.devices.isEmpty)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 40),
@@ -85,109 +85,71 @@ class ManagementScreen extends ConsumerWidget {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         gradient: AppColors.headerGradient,
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(26),
         boxShadow: [
           BoxShadow(
               color: AppColors.primary.withOpacity(0.35),
-              blurRadius: 26,
-              offset: const Offset(0, 12)),
+              blurRadius: 24,
+              offset: const Offset(0, 10)),
         ],
       ),
-      child: Stack(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Positioned(
-            left: -30,
-            top: -30,
-            child: Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                  shape: BoxShape.circle, color: Colors.white.withOpacity(0.07)),
-            ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.18),
+                    borderRadius: BorderRadius.circular(9)),
+                child: const Icon(Icons.speed_rounded, color: Colors.white, size: 16),
+              ),
+              const SizedBox(width: 9),
+              const Text('سرعت لحظه‌ای کل شبکه',
+                  style: TextStyle(color: Colors.white, fontSize: 12.5)),
+              const Spacer(),
+              Container(
+                  width: 7, height: 7, decoration: const BoxDecoration(color: Color(0xFF34D399), shape: BoxShape.circle)),
+              const SizedBox(width: 5),
+              const Text('زنده', style: TextStyle(color: Colors.white70, fontSize: 11)),
+            ],
           ),
-          Positioned(
-            right: -20,
-            bottom: -40,
-            child: Container(
-              width: 110,
-              height: 110,
-              decoration: BoxDecoration(
-                  shape: BoxShape.circle, color: Colors.white.withOpacity(0.06)),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(7),
-                      decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.18),
-                          borderRadius: BorderRadius.circular(10)),
-                      child: const Icon(Icons.speed_rounded, color: Colors.white, size: 18),
-                    ),
-                    const SizedBox(width: 10),
-                    const Text('سرعت لحظه‌ای کل شبکه',
-                        style: TextStyle(color: Colors.white, fontSize: 13)),
-                    const Spacer(),
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                          color: Color(0xFF34D399), shape: BoxShape.circle),
-                    ),
-                    const SizedBox(width: 5),
-                    const Text('زنده',
-                        style: TextStyle(color: Colors.white70, fontSize: 11)),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _speedStat(
-                        icon: Icons.arrow_downward_rounded,
-                        label: 'دانلود',
-                        value: formatSpeed(snapshot.totalDownKbps),
-                      ),
-                    ),
-                    Container(width: 1, height: 44, color: Colors.white24),
-                    Expanded(
-                      child: _speedStat(
-                        icon: Icons.arrow_upward_rounded,
-                        label: 'آپلود',
-                        value: formatSpeed(snapshot.totalUpKbps),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _speedStat(Icons.arrow_downward_rounded, 'دانلود',
+                    formatSpeed(snapshot.totalUpKbps)),
+              ),
+              Container(width: 1, height: 36, color: Colors.white24),
+              Expanded(
+                child: _speedStat(Icons.arrow_upward_rounded, 'آپلود',
+                    formatSpeed(snapshot.totalDownKbps)),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _speedStat({required IconData icon, required String label, required String value}) {
+  Widget _speedStat(IconData icon, String label, String value) {
     return Column(
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: Colors.white, size: 16),
+            Icon(icon, color: Colors.white, size: 15),
             const SizedBox(width: 4),
-            Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+            Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11.5)),
           ],
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 5),
         Text(value,
             textDirection: TextDirection.ltr,
-            style: const TextStyle(
-                color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800)),
+            style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w800)),
       ],
     );
   }
@@ -196,119 +158,82 @@ class ManagementScreen extends ConsumerWidget {
     final isBlocked = d.limitStatus == DeviceLimitStatus.blocked;
     final isLimited = d.limitStatus == DeviceLimitStatus.limited;
     final hasRestriction = isBlocked || isLimited;
-
     final accent = hasRestriction ? AppColors.danger : AppColors.primary;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Container(
-        decoration:
-        AppDecor.card(borderColor: hasRestriction ? AppColors.danger : null),
+        decoration: AppDecor.card(borderColor: hasRestriction ? AppColors.danger : null, radius: 16),
         child: InkWell(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           onTap: () {
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (_) => DeviceDetailScreen(
-                  deviceIp: d.device.ipAddress,
-                  initialDevice: d,
-                ),
+                builder: (_) => DeviceDetailScreen(deviceIp: d.device.ipAddress, initialDevice: d),
               ),
             );
           },
           child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 46,
-                      height: 46,
-                      decoration: BoxDecoration(
-                        color: accent.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(14),
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: accent.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: Icon(
+                    isBlocked ? Icons.block_rounded : Icons.smartphone_rounded,
+                    color: accent,
+                    size: 19,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        d.device.hostName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w800, fontSize: 13.5, color: AppColors.textPrimary),
                       ),
-                      child: Icon(
-                        isBlocked ? Icons.block_rounded : Icons.smartphone_rounded,
-                        color: accent,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      const SizedBox(height: 2),
+                      Row(
                         children: [
-                          Text(
-                            d.device.hostName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 15,
-                                color: AppColors.textPrimary),
-                          ),
-                          const SizedBox(height: 2),
                           Text(
                             d.device.ipAddress,
                             textDirection: TextDirection.ltr,
-                            style: const TextStyle(
-                                fontSize: 12, color: AppColors.textSecondary),
+                            style: const TextStyle(fontSize: 10.5, color: AppColors.textSecondary),
                           ),
+                          if (hasRestriction) ...[
+                            const SizedBox(width: 6),
+                            Text(
+                              isBlocked ? 'بلاک' : formatLimit(d.limitDownloadKbps),
+                              style: const TextStyle(
+                                  fontSize: 10.5, color: AppColors.danger, fontWeight: FontWeight.w700),
+                            ),
+                          ],
                         ],
                       ),
-                    ),
-                    const Icon(Icons.chevron_left_rounded,
-                        color: AppColors.textSecondary),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _rateChip(
-                        Icons.arrow_downward_rounded,
-                        formatSpeed(d.currentDownloadKbps),
-                        AppColors.primary,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _rateChip(
-                        Icons.arrow_upward_rounded,
-                        formatSpeed(d.currentUploadKbps),
-                        AppColors.secondary,
-                      ),
-                    ),
-                  ],
-                ),
-                if (hasRestriction) ...[
-                  const SizedBox(height: 10),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: AppColors.danger.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(isBlocked ? Icons.block_rounded : Icons.speed_rounded,
-                            size: 16, color: AppColors.danger),
-                        const SizedBox(width: 8),
-                        Text(
-                          isBlocked
-                              ? 'این دستگاه بلاک شده است'
-                              : 'محدودیت سرعت: ${formatLimit(d.limitDownloadKbps)}',
-                          style: const TextStyle(
-                              color: AppColors.danger,
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w700),
-                        ),
-                      ],
-                    ),
+                    ],
                   ),
-                ],
+                ),
+                const SizedBox(width: 6),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    _miniRate(Icons.arrow_downward_rounded, d.currentUploadKbps, AppColors.primary),
+                    const SizedBox(height: 3),
+                    _miniRate(Icons.arrow_upward_rounded, d.currentDownloadKbps, AppColors.secondary),
+                  ],
+                ),
+                const SizedBox(width: 2),
+                const Icon(Icons.chevron_left_rounded, color: AppColors.textSecondary, size: 18),
               ],
             ),
           ),
@@ -317,24 +242,18 @@ class ManagementScreen extends ConsumerWidget {
     );
   }
 
-  Widget _rateChip(IconData icon, String value, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 10),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.09),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 15, color: color),
-          const SizedBox(width: 6),
-          Text(value,
-              textDirection: TextDirection.ltr,
-              style: TextStyle(
-                  fontSize: 12.5, fontWeight: FontWeight.w800, color: color)),
-        ],
-      ),
+  Widget _miniRate(IconData icon, double kbps, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 10, color: color),
+        const SizedBox(width: 2),
+        Text(
+          formatSpeed(kbps),
+          textDirection: TextDirection.ltr,
+          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: color),
+        ),
+      ],
     );
   }
 }

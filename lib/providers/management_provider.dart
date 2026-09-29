@@ -46,8 +46,8 @@ class _Flow {
 }
 
 class ManagementController extends AsyncNotifier<ManagementSnapshot> {
-  RouterService? _live; // سوکت استریم‌ها
-  RouterService? _cmd; // سوکت دستورات
+  RouterService? _live;
+  RouterService? _cmd;
 
   StreamSubscription? _totalSub;
   StreamSubscription? _torchSub;
@@ -61,7 +61,6 @@ class ManagementController extends AsyncNotifier<ManagementSnapshot> {
   List<OnlineDevice> _devices = [];
   Map<String, int> _limits = {};
 
-  // آخرین مقدار هر جریان (src>dst)؛ جریان‌های قدیمی‌تر از ۳ ثانیه حذف می‌شوند
   final Map<String, _Flow> _flows = {};
 
   @override
@@ -102,7 +101,6 @@ class ManagementController extends AsyncNotifier<ManagementSnapshot> {
       if (src == null || dst == null || src.isEmpty || dst.isEmpty) return;
       final tx = double.tryParse(e['tx'] ?? '0') ?? 0;
       final rx = double.tryParse(e['rx'] ?? '0') ?? 0;
-      // جهت tx/rx نسبت به روتر است؛ جمع هر دو، مستقل از جهت درست است
       _flows['$src>$dst'] = _Flow(src, dst, tx + rx, DateTime.now());
     }, onError: (_) {});
   }
@@ -113,9 +111,7 @@ class ManagementController extends AsyncNotifier<ManagementSnapshot> {
       final limits = await _cmd!.getLimitKbps();
       _devices = devices;
       _limits = limits;
-    } catch (_) {
-      // لیست قبلی حفظ می‌شود
-    }
+    } catch (_) {}
   }
 
   ManagementSnapshot _buildSnapshot() {

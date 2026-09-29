@@ -15,7 +15,7 @@ class ProvinceSelectScreen extends ConsumerStatefulWidget {
 
 class _ProvinceSelectScreenState extends ConsumerState<ProvinceSelectScreen> {
   // ولایت‌هایی که هنوز فعال نیستند (فقط نمایش)
-  static const _comingSoon = ['مزار شریف', 'شیبرغان'];
+  static const _comingSoon = ['مزار شریف'];
 
   List<Province> _active = [];
   bool _loading = true;
