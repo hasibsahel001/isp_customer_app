@@ -13,3 +13,11 @@ String formatLimit(int kbps) {
   }
   return '$kbps Kbps';
 }
+
+String _trimNum(double v) {
+  if (v == v.roundToDouble()) return v.toStringAsFixed(0);
+  return v.toStringAsFixed(2);
+}
+
+// عدد همیشه قبل از واحد نمایش داده می‌شود (مثل 160 GB)، حتی داخل متن راست‌به‌چپ
+String formatGB(double? v) => v == null ? '-' : '${_trimNum(v)} GB';

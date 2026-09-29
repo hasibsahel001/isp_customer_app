@@ -1,12 +1,14 @@
 class DatesInfo {
   final String? startDateFriendly;
   final String? endDateFriendly;
+  final String? endTime;
   final dynamic daysRemaining; // int، یا "expired"، یا "unlimited"
   final int? totalDaysOfPackage;
 
   DatesInfo({
     required this.startDateFriendly,
     required this.endDateFriendly,
+    required this.endTime,
     required this.daysRemaining,
     required this.totalDaysOfPackage,
   });
@@ -15,13 +17,25 @@ class DatesInfo {
     return DatesInfo(
       startDateFriendly: json['startDateFriendly'] as String?,
       endDateFriendly: json['endDateFriendly'] as String?,
+      endTime: json['endTime'] as String?,
       daysRemaining: json['daysRemaining'],
       totalDaysOfPackage: (json['totalDaysOfPackage'] as num?)?.toInt(),
     );
   }
 
   bool get isExpired => daysRemaining == 'expired';
-  bool get isUnlimitedDuration => daysRemaining == 'unlimited';
+  bool get isUnlimitedDuration => daysRemaining == 'unlimited' || totalDaysOfPackage == null;
+
+  int get usedDays {
+    if (isUnlimitedDuration || totalDaysOfPackage == null) return 0;
+    final rem = daysRemaining is int ? daysRemaining as int : 0;
+    return (totalDaysOfPackage! - rem).clamp(0, totalDaysOfPackage!);
+  }
+
+  int get usagePercent {
+    if (isUnlimitedDuration || totalDaysOfPackage == null || totalDaysOfPackage == 0) return 0;
+    return ((usedDays / totalDaysOfPackage!) * 100).round().clamp(0, 100);
+  }
 }
 
 enum TrafficLimitType { unlimited, monthlyCap, fixed }

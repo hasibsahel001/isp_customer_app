@@ -9,10 +9,7 @@ import '../services/router_service.dart';
 import '../services/secure_storage_service.dart';
 import '../services/wifi_helper.dart';
 import '../theme/app_theme.dart';
-import 'main_navigation_screen.dart';
-import 'province_select_screen.dart';
 
-// 🧪 TEST MODE — قبل از انتشار نهایی false شود
 const bool kEnableTestLoginBypass = true;
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -36,13 +33,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   String _friendlyErrorMessage(Object error) {
     final raw = error.toString().replaceAll('Exception: ', '');
-
     if (raw.contains('invalid user name or password') || raw.contains('cannot log in')) {
       return 'آیدی کاربری اشتباه است';
     }
-    if (raw.contains('SocketException') ||
-        raw.contains('Connection refused') ||
-        raw.contains('timed out') ||
+    if (raw.contains('SocketException') || raw.contains('Connection refused') || raw.contains('timed out') ||
         raw.contains('پاسخی از روتر دریافت نشد')) {
       return 'اتصال به روتر برقرار نشد. مطمئن شوید به وای‌فای روتر خود وصل هستید';
     }
@@ -74,27 +68,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     try {
       final hasPermission = await WifiHelper.requestPermission();
-      if (!hasPermission) {
-        throw Exception('برای ورود، دسترسی به اطلاعات وای‌فای لازم است');
-      }
+      if (!hasPermission) throw Exception('برای ورود، دسترسی به اطلاعات وای‌فای لازم است');
       if (!await WifiHelper.isConnectedToWifi()) {
         throw Exception('لطفاً ابتدا به وای‌فای روتر خودتان وصل شوید');
       }
       final gatewayIp = await WifiHelper.getGatewayIp();
       if (gatewayIp == null) throw Exception('آدرس روتر یافت نشد');
 
-      // آیدی کاربری هم یوزر و هم پسورد روتر است
       routerService = RouterService();
-      await routerService.connect(
-        gatewayIp,
-        app_config.RouterConfig.apiPort,
-        userId,
-        userId,
-      );
+      await routerService.connect(gatewayIp, app_config.RouterConfig.apiPort, userId, userId);
 
       await SecureStorageService.saveRouterCredentials(userId, userId);
 
-      // اختیاری: یافتن PPPoE و بستهٔ اینترنتی
       try {
         final pppoeUsername = await routerService.getPppoeUsername();
         if (pppoeUsername != null) {
@@ -106,11 +91,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       } catch (_) {}
 
       ref.read(authProvider.notifier).markAuthenticated();
-
-      if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
-      );
     } catch (e) {
       setState(() => _errorMessage = _friendlyErrorMessage(e));
     } finally {
@@ -119,7 +99,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
-  // 🧪 TEST MODE
   Future<void> _handleTestLogin() async {
     final c = TextEditingController();
     final result = await showDialog<String>(
@@ -129,15 +108,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         content: TextField(
           controller: c,
           textDirection: TextDirection.ltr,
-          decoration: const InputDecoration(
-            labelText: 'یوزرنیم PPPoE واقعی',
-            hintText: 'مثلاً MatinHome',
-          ),
+          decoration: const InputDecoration(labelText: 'یوزرنیم PPPoE واقعی', hintText: 'مثلاً MatinHome'),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(d), child: const Text('انصراف')),
-          TextButton(
-              onPressed: () => Navigator.pop(d, c.text.trim()), child: const Text('ورود')),
+          TextButton(onPressed: () => Navigator.pop(d, c.text.trim()), child: const Text('ورود')),
         ],
       ),
     );
@@ -150,26 +125,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
     await SecureStorageService.saveRouterCredentials('test', 'test');
     ref.read(authProvider.notifier).markAuthenticated();
-    if (!mounted) return;
-    setState(() => _isSubmitting = false);
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
-    );
+    if (mounted) setState(() => _isSubmitting = false);
   }
 
   Future<void> _changeProvince() async {
-    await SecureStorageService.deleteProvince();
-    if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const ProvinceSelectScreen()),
-    );
+    await ref.read(authProvider.notifier).changeProvince();
   }
 
   Future<void> _open(String url) async {
     final ok = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
     if (!ok && mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('باز کردن لینک ممکن نشد')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('باز کردن لینک ممکن نشد')));
     }
   }
 
@@ -194,20 +160,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       gradient: AppColors.headerGradient,
                       borderRadius: BorderRadius.circular(26),
                       boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primary.withOpacity(0.35),
-                          blurRadius: 24,
-                          offset: const Offset(0, 10),
-                        ),
+                        BoxShadow(color: AppColors.primary.withOpacity(0.35), blurRadius: 24, offset: const Offset(0, 10)),
                       ],
                     ),
                     child: const Icon(Icons.wifi_rounded, color: Colors.white, size: 42),
                   ),
                 ),
                 const SizedBox(height: 22),
-                const Text('ورود به حساب',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
+                const Text('ورود به حساب', textAlign: TextAlign.center, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 10),
                 Center(
                   child: InkWell(
@@ -215,23 +175,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     onTap: _changeProvince,
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
+                      decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.location_on_rounded,
-                              size: 16, color: AppColors.primary),
+                          const Icon(Icons.location_on_rounded, size: 16, color: AppColors.primary),
                           const SizedBox(width: 4),
-                          Text(widget.province.displayName,
-                              style: const TextStyle(
-                                  color: AppColors.primary, fontWeight: FontWeight.w700)),
+                          Text(widget.province.displayName, style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700)),
                           const SizedBox(width: 6),
-                          const Text('تغییر',
-                              style: TextStyle(
-                                  color: AppColors.textSecondary, fontSize: 12)),
+                          const Text('تغییر', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
                         ],
                       ),
                     ),
@@ -260,20 +212,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         const SizedBox(height: 14),
                         Container(
                           padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: AppColors.danger.withOpacity(0.08),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+                          decoration: BoxDecoration(color: AppColors.danger.withOpacity(0.08), borderRadius: BorderRadius.circular(12)),
                           child: Row(
                             children: [
-                              const Icon(Icons.error_outline_rounded,
-                                  color: AppColors.danger, size: 18),
+                              const Icon(Icons.error_outline_rounded, color: AppColors.danger, size: 18),
                               const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(_errorMessage!,
-                                    style: const TextStyle(
-                                        color: AppColors.danger, fontSize: 13)),
-                              ),
+                              Expanded(child: Text(_errorMessage!, style: const TextStyle(color: AppColors.danger, fontSize: 13))),
                             ],
                           ),
                         ),
@@ -282,21 +226,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ElevatedButton(
                         onPressed: _isSubmitting ? null : _handleLogin,
                         child: _isSubmitting
-                            ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2.2),
-                        )
+                            ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.2))
                             : const Text('ورود'),
                       ),
                       if (kEnableTestLoginBypass) ...[
                         const SizedBox(height: 8),
                         TextButton(
                           onPressed: _isSubmitting ? null : _handleTestLogin,
-                          child: const Text('🧪 ورود آزمایشی (بدون اتصال به روتر)',
-                              style: TextStyle(
-                                  fontSize: 12, color: AppColors.textSecondary)),
+                          child: const Text('🧪 ورود آزمایشی (بدون اتصال به روتر)', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                         ),
                       ],
                     ],
@@ -315,11 +252,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget _supportSection(SupportContact support) {
     return Column(
       children: [
-        const Text(
-          'برای دریافت آیدی کاربری به واتساپ یا تلگرام شرکت ما پیام بدهید',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.7),
-        ),
+        const Text('برای دریافت آیدی کاربری به واتساپ یا تلگرام شرکت ما پیام بدهید',
+            textAlign: TextAlign.center, style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.7)),
         const SizedBox(height: 12),
         Row(
           children: [
@@ -343,29 +277,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ],
         ),
         const SizedBox(height: 8),
-        Text(support.displayPhone,
-            textDirection: TextDirection.ltr,
-            style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+        Text(support.displayPhone, textDirection: TextDirection.ltr, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
       ],
     );
   }
 
-  Widget _supportButton({
-    required String label,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
+  Widget _supportButton({required String label, required IconData icon, required Color color, required VoidCallback onTap}) {
     return InkWell(
       borderRadius: BorderRadius.circular(14),
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 13),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: color.withOpacity(0.4)),
-        ),
+        decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(14), border: Border.all(color: color.withOpacity(0.4))),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

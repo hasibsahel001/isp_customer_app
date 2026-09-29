@@ -1,13 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/province.dart';
 import '../services/api_service.dart';
 import '../services/secure_storage_service.dart';
 
-enum AuthStatus { unknown, authenticated, unauthenticated }
+enum AuthStage { unknown, needProvince, needLogin, authenticated }
 
 class AuthState {
-  final AuthStatus status;
+  final AuthStage stage;
+  final Province? province;
 
-  AuthState({required this.status});
+  AuthState({required this.stage, this.province});
 }
 
 final apiServiceProvider = Provider<ApiService>((ref) => ApiService());
@@ -15,25 +17,48 @@ final apiServiceProvider = Provider<ApiService>((ref) => ApiService());
 class AuthNotifier extends Notifier<AuthState> {
   @override
   AuthState build() {
-    _checkExistingSession();
-    return AuthState(status: AuthStatus.unknown);
+    _init();
+    return AuthState(stage: AuthStage.unknown);
   }
 
-  // وضعیت ورود حالا بر اساس وجود اطلاعات روتر ذخیره‌شده است، نه JWT بک‌اند
-  Future<void> _checkExistingSession() async {
+  Future<void> _init() async {
+    final provinceName = await SecureStorageService.getProvince();
+    if (provinceName == null) {
+      state = AuthState(stage: AuthStage.needProvince);
+      return;
+    }
+
+    Province? province;
+    try {
+      final list = await ref.read(apiServiceProvider).getProvinces();
+      for (final p in list) {
+        if (p.name == provinceName) province = p;
+      }
+    } catch (_) {}
+    province ??= Province(id: 0, name: provinceName, displayName: provinceName);
+
     final creds = await SecureStorageService.getRouterCredentials();
-    state = AuthState(
-      status: creds != null ? AuthStatus.authenticated : AuthStatus.unauthenticated,
-    );
+    if (creds != null) {
+      state = AuthState(stage: AuthStage.authenticated, province: province);
+    } else {
+      state = AuthState(stage: AuthStage.needLogin, province: province);
+    }
   }
 
-  // بعد از اتصال موفق به روتر (صرف‌نظر از پیدا شدن یا نشدن بستهٔ اینترنتی)
+  Future<void> selectProvince(Province p) async {
+    await SecureStorageService.saveProvince(p.name);
+    state = AuthState(stage: AuthStage.needLogin, province: p);
+  }
+
+  Future<void> changeProvince() async {
+    await SecureStorageService.deleteProvince();
+    state = AuthState(stage: AuthStage.needProvince);
+  }
+
   void markAuthenticated() {
-    state = AuthState(status: AuthStatus.authenticated);
+    state = AuthState(stage: AuthStage.authenticated, province: state.province);
   }
 
-  // تلاش برای گرفتن JWT از بک‌اند؛ اگر ناموفق بود، فقط false برمی‌گرداند
-  // و مانع ورود کاربر به اپ نمی‌شود
   Future<bool> tryBackendLogin({
     required String provinceName,
     required String pppoeUsername,
@@ -53,8 +78,8 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   Future<void> logout() async {
-    await SecureStorageService.deleteAll();
-    state = AuthState(status: AuthStatus.unauthenticated);
+    await SecureStorageService.deleteAll(); // ولایت حفظ می‌شود
+    state = AuthState(stage: AuthStage.needLogin, province: state.province);
   }
 }
 

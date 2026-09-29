@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/province.dart';
 import '../providers/auth_provider.dart';
-import '../services/secure_storage_service.dart';
 import '../theme/app_theme.dart';
-import 'login_screen.dart';
 
 class ProvinceSelectScreen extends ConsumerStatefulWidget {
   const ProvinceSelectScreen({super.key});
@@ -14,7 +12,6 @@ class ProvinceSelectScreen extends ConsumerStatefulWidget {
 }
 
 class _ProvinceSelectScreenState extends ConsumerState<ProvinceSelectScreen> {
-  // ولایت‌هایی که هنوز فعال نیستند (فقط نمایش)
   static const _comingSoon = ['مزار شریف'];
 
   List<Province> _active = [];
@@ -47,11 +44,7 @@ class _ProvinceSelectScreenState extends ConsumerState<ProvinceSelectScreen> {
   }
 
   Future<void> _select(Province p) async {
-    await SecureStorageService.saveProvince(p.name);
-    if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => LoginScreen(province: p)),
-    );
+    await ref.read(authProvider.notifier).selectProvince(p);
   }
 
   @override
@@ -69,11 +62,7 @@ class _ProvinceSelectScreenState extends ConsumerState<ProvinceSelectScreen> {
                   gradient: AppColors.headerGradient,
                   borderRadius: BorderRadius.circular(26),
                   boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withOpacity(0.35),
-                      blurRadius: 24,
-                      offset: const Offset(0, 10),
-                    ),
+                    BoxShadow(color: AppColors.primary.withOpacity(0.35), blurRadius: 24, offset: const Offset(0, 10)),
                   ],
                 ),
                 child: const Icon(Icons.wifi_rounded, color: Colors.white, size: 42),
@@ -82,12 +71,10 @@ class _ProvinceSelectScreenState extends ConsumerState<ProvinceSelectScreen> {
             const SizedBox(height: 26),
             const Text('خوش آمدید',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                    fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
             const SizedBox(height: 8),
             const Text('لطفاً ولایت خود را انتخاب کنید',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+                textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
             const SizedBox(height: 30),
             if (_loading)
               const Padding(
@@ -95,22 +82,12 @@ class _ProvinceSelectScreenState extends ConsumerState<ProvinceSelectScreen> {
                 child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
               )
             else if (_error != null) ...[
-              Text(_error!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.danger)),
+              Text(_error!, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.danger)),
               const SizedBox(height: 12),
               OutlinedButton(onPressed: _load, child: const Text('تلاش دوباره')),
             ] else ...[
-              ..._active.map((p) => _provinceTile(
-                title: p.displayName,
-                enabled: true,
-                onTap: () => _select(p),
-              )),
-              ..._comingSoon.map((n) => _provinceTile(
-                title: n,
-                enabled: false,
-                subtitle: 'به‌زودی اضافه می‌گردد',
-              )),
+              ..._active.map((p) => _provinceTile(title: p.displayName, enabled: true, onTap: () => _select(p))),
+              ..._comingSoon.map((n) => _provinceTile(title: n, enabled: false, subtitle: 'به‌زودی اضافه می‌گردد')),
             ],
           ],
         ),
@@ -118,12 +95,7 @@ class _ProvinceSelectScreenState extends ConsumerState<ProvinceSelectScreen> {
     );
   }
 
-  Widget _provinceTile({
-    required String title,
-    required bool enabled,
-    String? subtitle,
-    VoidCallback? onTap,
-  }) {
+  Widget _provinceTile({required String title, required bool enabled, String? subtitle, VoidCallback? onTap}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Opacity(
@@ -141,26 +113,20 @@ class _ProvinceSelectScreenState extends ConsumerState<ProvinceSelectScreen> {
                     width: 46,
                     height: 46,
                     decoration: BoxDecoration(
-                      color: (enabled ? AppColors.primary : AppColors.textSecondary)
-                          .withOpacity(0.12),
+                      color: (enabled ? AppColors.primary : AppColors.textSecondary).withOpacity(0.12),
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    child: Icon(Icons.location_city_rounded,
-                        color: enabled ? AppColors.primary : AppColors.textSecondary),
+                    child: Icon(Icons.location_city_rounded, color: enabled ? AppColors.primary : AppColors.textSecondary),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(title,
-                            style: const TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.w800)),
+                        Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
                         if (subtitle != null) ...[
                           const SizedBox(height: 3),
-                          Text(subtitle,
-                              style: const TextStyle(
-                                  fontSize: 12, color: AppColors.warning)),
+                          Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.warning)),
                         ],
                       ],
                     ),
@@ -168,8 +134,7 @@ class _ProvinceSelectScreenState extends ConsumerState<ProvinceSelectScreen> {
                   if (enabled)
                     const Icon(Icons.chevron_left_rounded, color: AppColors.textSecondary)
                   else
-                    const Icon(Icons.lock_clock_rounded,
-                        color: AppColors.textSecondary, size: 20),
+                    const Icon(Icons.lock_clock_rounded, color: AppColors.textSecondary, size: 20),
                 ],
               ),
             ),
