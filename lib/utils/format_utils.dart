@@ -19,5 +19,7 @@ String _trimNum(double v) {
   return v.toStringAsFixed(2);
 }
 
-// عدد همیشه قبل از واحد نمایش داده می‌شود (مثل 160 GB)، حتی داخل متن راست‌به‌چپ
 String formatGB(double? v) => v == null ? '-' : '${_trimNum(v)} GB';
+
+// برای متن فارسی، بدون اجبار جهت LTR (طبیعی در RTL خوانده می‌شود)
+String formatGBFa(double? v) => v == null ? '-' : '${_trimNum(v)} گیگابایت';

@@ -1,7 +1,15 @@
 import 'package:dio/dio.dart';
 import '../models/province.dart';
 import '../models/package_info.dart';
+import '../models/customer_info.dart';
 import 'secure_storage_service.dart';
+
+class HomeData {
+  final PackageInfo? package;
+  final CustomerInfo customer;
+
+  HomeData({required this.package, required this.customer});
+}
 
 class ApiService {
   static const String baseUrl = 'https://ispco-api.duckdns.org';
@@ -32,7 +40,7 @@ class ApiService {
     return response.data as Map<String, dynamic>;
   }
 
-  Future<PackageInfo> getPackageInfo() async {
+  Future<HomeData> getHomeData() async {
     final token = await SecureStorageService.getToken();
     if (token == null) {
       throw Exception('توکن یافت نشد، لطفاً دوباره وارد شوید');
@@ -43,8 +51,14 @@ class ApiService {
       options: Options(headers: {'Authorization': 'Bearer $token'}),
     );
 
-    return PackageInfo.fromJson(
-      response.data['package'] as Map<String, dynamic>,
+    final data = response.data as Map<String, dynamic>;
+    final packageJson = data['package'] as Map<String, dynamic>?;
+
+    return HomeData(
+      package: (packageJson != null && packageJson['error'] == null)
+          ? PackageInfo.fromJson(packageJson)
+          : null,
+      customer: CustomerInfo.fromJson(data['customer'] as Map<String, dynamic>?),
     );
   }
 }

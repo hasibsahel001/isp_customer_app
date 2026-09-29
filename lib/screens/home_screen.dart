@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/package_info.dart';
+import '../models/customer_info.dart';
 import '../providers/package_provider.dart';
+import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/format_utils.dart';
 
@@ -10,37 +12,37 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final packageAsync = ref.watch(packageInfoProvider);
+    final homeAsync = ref.watch(packageInfoProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('خانه')),
-      body: RefreshIndicator(
-        color: AppColors.primary,
-        onRefresh: () async {
-          ref.invalidate(packageInfoProvider);
-          await ref.read(packageInfoProvider.future);
-        },
-        child: packageAsync.when(
-          data: (package) {
-            if (package == null) return _buildNoPackage();
-            return _buildContent(package);
+      body: SafeArea(
+        child: RefreshIndicator(
+          color: AppColors.primary,
+          onRefresh: () async {
+            ref.invalidate(packageInfoProvider);
+            await ref.read(packageInfoProvider.future);
           },
-          loading: () => ListView(
-            children: const [
-              SizedBox(height: 200),
-              Center(child: CircularProgressIndicator(color: AppColors.primary)),
-            ],
+          child: homeAsync.when(
+            data: (data) => _buildContent(data),
+            loading: () => ListView(
+              children: const [
+                SizedBox(height: 240),
+                Center(child: CircularProgressIndicator(color: AppColors.primary)),
+              ],
+            ),
+            error: (err, stack) => _buildNoPackage(CustomerInfo()),
           ),
-          error: (err, stack) => _buildNoPackage(),
         ),
       ),
     );
   }
 
-  Widget _buildNoPackage() {
+  Widget _buildNoPackage(CustomerInfo customer) {
     return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       children: [
-        const SizedBox(height: 100),
+        _buildGreeting(customer),
+        const SizedBox(height: 80),
         Center(
           child: Container(
             width: 88,
@@ -78,16 +80,37 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildContent(PackageInfo p) {
+  Widget _buildContent(HomeData data) {
+    final p = data.package;
+    if (p == null) return _buildNoPackage(data.customer);
+
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
       children: [
+        _buildGreeting(data.customer),
+        const SizedBox(height: 14),
         _buildHeroCard(p),
         const SizedBox(height: 16),
         _buildTimeCard(p),
-        const SizedBox(height: 16),
-        _buildStatsGrid(p),
       ],
+    );
+  }
+
+  // ---------- سربرگ خوش‌آمدگویی ----------
+  Widget _buildGreeting(CustomerInfo customer) {
+    final fullName = customer.fullName;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
+      child: Text(
+        fullName.isNotEmpty ? 'خوش آمدید $fullName عزیز' : 'خوش آمدید',
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w800,
+          color: AppColors.textPrimary,
+        ),
+      ),
     );
   }
 
@@ -97,7 +120,7 @@ class HomeScreen extends ConsumerWidget {
     return Colors.white;
   }
 
-  // ---------- کارت اصلی (گرادیان رنگی) ----------
+  // ---------- کارت اصلی بسته ----------
   Widget _buildHeroCard(PackageInfo p) {
     final isUnlimited = p.traffic.limitType == TrafficLimitType.unlimited;
     final usagePercent = p.traffic.usagePercent.clamp(0, 100);
@@ -148,12 +171,16 @@ class HomeScreen extends ConsumerWidget {
                           const Text('بستهٔ فعلی شما',
                               style: TextStyle(fontSize: 13, color: Colors.white70, fontWeight: FontWeight.w600)),
                           const SizedBox(height: 6),
-                          Text(
-                            p.serviceName ?? 'بدون بسته',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                fontSize: 21, fontWeight: FontWeight.w800, color: Colors.white, height: 1.3),
+                          // نام بسته همیشه در یک خط، با کوچک‌شدن خودکار در صورت طولانی بودن
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: AlignmentDirectional.centerStart,
+                            child: Text(
+                              p.serviceName ?? 'بدون بسته',
+                              maxLines: 1,
+                              style: const TextStyle(
+                                  fontSize: 21, fontWeight: FontWeight.w800, color: Colors.white),
+                            ),
                           ),
                         ],
                       ),
@@ -162,8 +189,6 @@ class HomeScreen extends ConsumerWidget {
                     _statusBadge(p.isActive),
                   ],
                 ),
-                const SizedBox(height: 14),
-                _trafficTypeBadge(p.traffic.limitType),
                 const SizedBox(height: 26),
                 if (isUnlimited)
                   _buildUnlimitedBanner()
@@ -192,40 +217,6 @@ class HomeScreen extends ConsumerWidget {
           const SizedBox(width: 6),
           Text(isActive ? 'فعال' : 'غیرفعال',
               style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w800)),
-        ],
-      ),
-    );
-  }
-
-  Widget _trafficTypeBadge(TrafficLimitType type) {
-    String text;
-    IconData icon;
-    switch (type) {
-      case TrafficLimitType.unlimited:
-        text = 'ترافیک کاملاً نامحدود';
-        icon = Icons.all_inclusive_rounded;
-        break;
-      case TrafficLimitType.monthlyCap:
-        text = 'نامحدود با سقف ماهانه';
-        icon = Icons.calendar_view_month_rounded;
-        break;
-      case TrafficLimitType.fixed:
-        text = 'بستهٔ حجمی';
-        icon = Icons.data_usage_rounded;
-        break;
-    }
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 15, color: Colors.white),
-          const SizedBox(width: 7),
-          Text(text, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Colors.white)),
         ],
       ),
     );
@@ -285,194 +276,170 @@ class HomeScreen extends ConsumerWidget {
             valueColor: AlwaysStoppedAnimation(barColor),
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('باقی‌مانده: ${formatGB(p.traffic.remainingGB)}',
-                textDirection: TextDirection.ltr,
-                style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 12.5, fontWeight: FontWeight.w600)),
-            Text('کل: ${formatGB(p.traffic.totalGB)}',
-                textDirection: TextDirection.ltr,
-                style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 12.5, fontWeight: FontWeight.w600)),
+            Text('باقی‌مانده: ${formatGBFa(p.traffic.remainingGB)}',
+                style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 12.5, fontWeight: FontWeight.w600)),
+            Text('کل: ${formatGBFa(p.traffic.totalGB)}',
+                style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 12.5, fontWeight: FontWeight.w600)),
           ],
         ),
       ],
     );
   }
 
-  // ---------- کارت زمان بسته ----------
+  // ---------- کارت مدت‌زمان بسته (همرنگ کارت بالا) ----------
   Widget _buildTimeCard(PackageInfo p) {
     final d = p.dates;
 
     return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: AppDecor.card(radius: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                    color: AppColors.accent.withOpacity(0.12), borderRadius: BorderRadius.circular(10)),
-                child: const Icon(Icons.calendar_today_rounded, color: AppColors.accent, size: 18),
-              ),
-              const SizedBox(width: 10),
-              const Text('مدت زمان بسته',
-                  style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
-            ],
-          ),
-          const SizedBox(height: 18),
-          if (d.isUnlimitedDuration)
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        gradient: AppColors.headerGradient,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+              color: AppColors.primary.withOpacity(0.3), blurRadius: 24, offset: const Offset(0, 10)),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(22),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             Row(
-              children: const [
-                Icon(Icons.all_inclusive_rounded, color: AppColors.success, size: 22),
-                SizedBox(width: 10),
-                Text('بدون محدودیت زمانی', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-              ],
-            )
-          else ...[
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  d.isExpired ? 'منقضی شده' : '${d.daysRemaining}',
-                  textDirection: TextDirection.ltr,
-                  style: TextStyle(
-                    fontSize: d.isExpired ? 20 : 30,
-                    fontWeight: FontWeight.w800,
-                    color: d.isExpired ? AppColors.danger : AppColors.textPrimary,
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration:
+                  BoxDecoration(color: Colors.white.withOpacity(0.18), borderRadius: BorderRadius.circular(10)),
+                  child: const Icon(Icons.calendar_today_rounded, color: Colors.white, size: 18),
+                ),
+                const SizedBox(width: 10),
+                const Text('مدت زمان بسته',
+                    style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800, color: Colors.white)),
+              ],
+            ),
+            const SizedBox(height: 22),
+            if (d.isUnlimitedDuration)
+              Row(
+                children: const [
+                  Icon(Icons.all_inclusive_rounded, color: Colors.white, size: 26),
+                  SizedBox(width: 10),
+                  Text('بدون محدودیت زمانی',
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5, color: Colors.white)),
+                ],
+              )
+            else ...[
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    d.isExpired ? 'منقضی شده' : '${d.daysRemaining}',
+                    textDirection: TextDirection.ltr,
+                    style: TextStyle(
+                      fontSize: d.isExpired ? 20 : 30,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                  if (!d.isExpired) ...[
+                    const SizedBox(width: 6),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 5),
+                      child: Text('روز باقی‌مانده', style: TextStyle(color: Colors.white.withOpacity(0.75), fontSize: 13)),
+                    ),
+                  ],
+                  const Spacer(),
+                  if (d.totalDaysOfPackage != null)
+                    Text('${d.usagePercent}٪',
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white)),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: LinearProgressIndicator(
+                  value: d.isExpired ? 1 : d.usagePercent / 100,
+                  minHeight: 12,
+                  backgroundColor: Colors.white.withOpacity(0.2),
+                  valueColor: AlwaysStoppedAnimation(d.isExpired ? const Color(0xFFFCA5A5) : Colors.white),
+                ),
+              ),
+              if (d.totalDaysOfPackage != null) ...[
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('${d.usedDays} روز مصرف‌شده',
+                        style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.85), fontWeight: FontWeight.w600)),
+                    Text('${d.totalDaysOfPackage} روز کل',
+                        style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.85), fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ],
+            ],
+            const SizedBox(height: 22),
+            Container(height: 1, color: Colors.white.withOpacity(0.2)),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: _dateColumn(
+                    icon: Icons.play_circle_outline_rounded,
+                    label: 'شروع بسته',
+                    date: d.startDateFriendly,
+                    time: null,
                   ),
                 ),
-                if (!d.isExpired) ...[
-                  const SizedBox(width: 6),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 5),
-                    child: Text('روز باقی‌مانده',
-                        style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                Container(width: 1, height: 54, color: Colors.white.withOpacity(0.2)),
+                Expanded(
+                  child: _dateColumn(
+                    icon: Icons.event_busy_rounded,
+                    label: 'پایان بسته',
+                    date: d.endDateFriendly,
+                    time: d.endTime,
                   ),
-                ],
-                const Spacer(),
-                if (d.totalDaysOfPackage != null)
-                  Text('${d.usagePercent}٪',
-                      style: const TextStyle(
-                          fontSize: 17, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
+                ),
               ],
             ),
-            const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: LinearProgressIndicator(
-                value: d.isExpired ? 1 : d.usagePercent / 100,
-                minHeight: 12,
-                backgroundColor: AppColors.border,
-                valueColor: AlwaysStoppedAnimation(d.isExpired ? AppColors.danger : AppColors.accent),
-              ),
-            ),
-            const SizedBox(height: 8),
-            if (d.totalDaysOfPackage != null)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('${d.usedDays} روز مصرف‌شده',
-                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
-                  Text('${d.totalDaysOfPackage} روز کل',
-                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
-                ],
-              ),
           ],
-          const Divider(height: 32),
-          _dateLine(Icons.play_circle_outline_rounded, 'شروع بسته', d.startDateFriendly, null),
-          const SizedBox(height: 12),
-          _dateLine(Icons.event_busy_rounded, 'پایان بسته', d.endDateFriendly, d.endTime),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _dateLine(IconData icon, String label, String? date, String? time) {
-    return Row(
+  Widget _dateColumn({
+    required IconData icon,
+    required String label,
+    required String? date,
+    required String? time,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Icon(icon, size: 18, color: AppColors.textSecondary),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(label, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-        ),
+        Icon(icon, color: Colors.white.withOpacity(0.9), size: 20),
+        const SizedBox(height: 8),
+        Text(label, style: TextStyle(fontSize: 11.5, color: Colors.white.withOpacity(0.75), fontWeight: FontWeight.w600)),
+        const SizedBox(height: 6),
         Text(
           date ?? '-',
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Colors.white),
         ),
         if (time != null) ...[
-          const SizedBox(width: 6),
+          const SizedBox(height: 6),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-            decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(color: Colors.white.withOpacity(0.18), borderRadius: BorderRadius.circular(8)),
             child: Text('ساعت $time',
                 textDirection: TextDirection.ltr,
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white)),
           ),
         ],
       ],
-    );
-  }
-
-  // ---------- شبکهٔ خلاصهٔ آماری ----------
-  Widget _buildStatsGrid(PackageInfo p) {
-    return Row(
-      children: [
-        Expanded(
-          child: _statCard(
-            icon: Icons.data_usage_rounded,
-            color: AppColors.primary,
-            label: 'حجم باقی‌مانده',
-            value: p.traffic.limitType == TrafficLimitType.unlimited ? '∞' : formatGB(p.traffic.remainingGB),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _statCard(
-            icon: Icons.timer_outlined,
-            color: AppColors.secondary,
-            label: 'روز باقی‌مانده',
-            value: p.dates.isUnlimitedDuration
-                ? '∞'
-                : (p.dates.isExpired ? 'تمام' : '${p.dates.daysRemaining}'),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _statCard({
-    required IconData icon,
-    required Color color,
-    required String label,
-    required String value,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: AppDecor.card(radius: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(9),
-            decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(12)),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(height: 12),
-          Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            textDirection: TextDirection.ltr,
-            style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
-          ),
-        ],
-      ),
     );
   }
 }
