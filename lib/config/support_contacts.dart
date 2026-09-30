@@ -1,26 +1,34 @@
 class SupportContact {
   final String telegramUrl;
-  final String whatsappNumber; // بدون صفر اول، با کد کشور
-  final String displayPhone;
+  final String displayPhone; // مثلاً '0799999999'
 
   const SupportContact({
     required this.telegramUrl,
-    required this.whatsappNumber,
     required this.displayPhone,
   });
+
+  // فرمت بین‌المللی برای لینک واتساپ (حذف صفر ابتدایی + کد کشور افغانستان)
+  String get whatsappNumber {
+    final digits = displayPhone.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.startsWith('0')) {
+      return '93${digits.substring(1)}';
+    }
+    return digits;
+  }
 }
 
 const Map<String, SupportContact> kSupportByProvince = {
   'ghazni': SupportContact(
-    telegramUrl: 'https://t.me/khorshid',
-    whatsappNumber: '93783555777',
-    displayPhone: '0783555777',
+    telegramUrl: 'https://t.me/ghaznitelegram',
+    displayPhone: '079999999',
   ),
-  // TODO: mazar و shiberghan را وقتی فعال شدند اینجا اضافه کنید
+  'sheberghan': SupportContact(
+    telegramUrl: 'https://t.me/sheberghantele',
+    displayPhone: '0788888888',
+  ),
 };
 
 const SupportContact kDefaultSupport = SupportContact(
-  telegramUrl: 'https://t.me/khorshid',
-  whatsappNumber: '93783555777',
-  displayPhone: '0783555777',
+  telegramUrl: 'https://t.me/hasibsahel',
+  displayPhone: '0729011991',
 );

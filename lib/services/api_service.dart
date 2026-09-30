@@ -30,14 +30,22 @@ class ApiService {
     required String provinceName,
     required String pppoeUsername,
   }) async {
-    final response = await _dio.post(
-      '/auth/login',
-      data: {
-        'provinceName': provinceName,
-        'pppoeUsername': pppoeUsername,
-      },
-    );
-    return response.data as Map<String, dynamic>;
+    try {
+      final response = await _dio.post(
+        '/auth/login',
+        data: {
+          'provinceName': provinceName,
+          'pppoeUsername': pppoeUsername,
+        },
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map && data['error'] != null) {
+        throw Exception(data['error'].toString());
+      }
+      rethrow;
+    }
   }
 
   Future<HomeData> getHomeData() async {

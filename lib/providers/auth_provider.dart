@@ -59,26 +59,22 @@ class AuthNotifier extends Notifier<AuthState> {
     state = AuthState(stage: AuthStage.authenticated, province: state.province);
   }
 
-  Future<bool> tryBackendLogin({
+  // حالا در صورت خطا، آن را پرتاب می‌کند تا فراخوان تصمیم بگیرد چه کند
+  Future<void> tryBackendLogin({
     required String provinceName,
     required String pppoeUsername,
   }) async {
-    try {
-      final apiService = ref.read(apiServiceProvider);
-      final result = await apiService.login(
-        provinceName: provinceName,
-        pppoeUsername: pppoeUsername,
-      );
-      final token = result['token'] as String;
-      await SecureStorageService.saveToken(token);
-      return true;
-    } catch (e) {
-      return false;
-    }
+    final apiService = ref.read(apiServiceProvider);
+    final result = await apiService.login(
+      provinceName: provinceName,
+      pppoeUsername: pppoeUsername,
+    );
+    final token = result['token'] as String;
+    await SecureStorageService.saveToken(token);
   }
 
   Future<void> logout() async {
-    await SecureStorageService.deleteAll(); // ولایت حفظ می‌شود
+    await SecureStorageService.deleteAll();
     state = AuthState(stage: AuthStage.needLogin, province: state.province);
   }
 }

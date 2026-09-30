@@ -33,6 +33,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   String _friendlyErrorMessage(Object error) {
     final raw = error.toString().replaceAll('Exception: ', '');
+
+    if (raw.contains('کاربری با این مشخصات یافت نشد')) {
+      return 'این آیدی در ولایت «${widget.province.displayName}» یافت نشد. ولایت را بررسی کنید یا با پشتیبانی تماس بگیرید.';
+    }
+    if (raw.contains('ولایت یافت نشد')) {
+      return 'این ولایت در حال حاضر فعال نیست';
+    }
     if (raw.contains('invalid user name or password') || raw.contains('cannot log in')) {
       return 'آیدی کاربری اشتباه است';
     }
@@ -52,9 +59,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return 'ورود ناموفق بود. لطفاً دوباره تلاش کنید یا با پشتیبانی تماس بگیرید';
   }
 
+  // ورود واقعی از طریق روتر: عمداً حتی اگر یوزرنیم PPPoE در سرور حساب‌داری
+  // پیدا نشود، اجازهٔ ورود می‌دهد (برای دسترسی به تب مدیریت)
   Future<void> _handleLogin() async {
-    final userId = _idController.text.trim();
-    if (userId.isEmpty) {
+    final routerUsername = _idController.text.trim();
+    if (routerUsername.isEmpty) {
       setState(() => _errorMessage = 'لطفاً آیدی کاربری خود را وارد کنید');
       return;
     }
@@ -76,9 +85,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (gatewayIp == null) throw Exception('آدرس روتر یافت نشد');
 
       routerService = RouterService();
-      await routerService.connect(gatewayIp, app_config.RouterConfig.apiPort, userId, userId);
+      await routerService.connect(
+        gatewayIp,
+        app_config.RouterConfig.apiPort,
+        routerUsername,
+        routerUsername,
+      );
 
-      await SecureStorageService.saveRouterCredentials(userId, userId);
+      await SecureStorageService.saveRouterCredentials(routerUsername, routerUsername);
 
       try {
         final pppoeUsername = await routerService.getPppoeUsername();
@@ -88,7 +102,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             pppoeUsername: pppoeUsername,
           );
         }
-      } catch (_) {}
+      } catch (_) {
+        // نادیده گرفته می‌شود: ورود فقط به اتصال روتر بستگی دارد
+      }
 
       ref.read(authProvider.notifier).markAuthenticated();
     } catch (e) {
@@ -99,6 +115,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  // 🧪 حالت تست: اینجا برخلاف ورود واقعی، اگر یوزرنیم در این ولایت پیدا
+  // نشود، ورود متوقف می‌شود و خطای واضح نمایش داده می‌شود
   Future<void> _handleTestLogin() async {
     final c = TextEditingController();
     final result = await showDialog<String>(
@@ -118,14 +136,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
     if (result == null || result.isEmpty) return;
 
-    setState(() => _isSubmitting = true);
-    await ref.read(authProvider.notifier).tryBackendLogin(
-      provinceName: widget.province.name,
-      pppoeUsername: result,
-    );
-    await SecureStorageService.saveRouterCredentials('test', 'test');
-    ref.read(authProvider.notifier).markAuthenticated();
-    if (mounted) setState(() => _isSubmitting = false);
+    setState(() {
+      _isSubmitting = true;
+      _errorMessage = null;
+    });
+
+    try {
+      await ref.read(authProvider.notifier).tryBackendLogin(
+        provinceName: widget.province.name,
+        pppoeUsername: result,
+      );
+      await SecureStorageService.saveRouterCredentials('test', 'test');
+      ref.read(authProvider.notifier).markAuthenticated();
+    } catch (e) {
+      setState(() => _errorMessage = _friendlyErrorMessage(e));
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   Future<void> _changeProvince() async {
