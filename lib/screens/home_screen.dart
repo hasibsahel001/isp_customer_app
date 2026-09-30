@@ -101,7 +101,7 @@ class HomeScreen extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
       child: Text(
-        fullName.isNotEmpty ? 'خوش آمدید، $fullName عزیز' : 'خوش آمدید',
+        fullName.isNotEmpty ? 'خوش آمدید $fullName، عزیز' : 'خوش آمدید',
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
         style: const TextStyle(
@@ -123,7 +123,7 @@ class HomeScreen extends ConsumerWidget {
     final isUnlimited = p.traffic.limitType == TrafficLimitType.unlimited;
     final usagePercent = p.traffic.usagePercent.clamp(0, 100);
     final barColor = _usageColor(usagePercent);
-    final displayName = simplifyPackageName(p.serviceName ?? 'بدون بسته');
+    final displayName = p.serviceName ?? 'بدون بسته';
 
     return Container(
       clipBehavior: Clip.antiAlias,
